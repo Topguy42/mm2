@@ -1,150 +1,178 @@
--- MM2 Hub by Top | Edited from Azura83's Script
--- Changes:
---   - Changed credit to "by Top" at top & in GUI
---   - Added Weapons tab with:
---     - Visual weapon spawner (client-side preview)
---     - Real weapon duplicator (duplicates held tool, makes it tradeable if game allows)
---   - Removed fling part as requested
---   - Kept all original features working (ESP, aim, auto gun, etc.)
+-- MM2 Hub by Top | Edited from Azura83 Script
+-- Original: https://raw.githubusercontent.com/Azura83/Murder-Mystery-2/refs/heads/main/Script.lua
+-- Edits by Top: Credit changed, Weapons tab added (visual spawn + real dupe), fling removed, GUI forced to PlayerGui
 
+-- Load original script
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Azura83/Murder-Mystery-2/refs/heads/main/Script.lua"))()
 
--- ======================= EDITS START HERE =======================
+-- ======================= TOP EDITS =======================
 
--- Wait for original script to load its GUI (assuming it uses a library like Kavo or custom ScreenGui)
-task.wait(2)  -- Give time for original GUI to appear
+task.wait(4)  -- Give original GUI time to load
 
--- Find original GUI (adjust name if different - common names: "Kavo", "Orion", "Linoria", "ScreenGui")
-local originalGui = game.CoreGui:FindFirstChildWhichIsA("ScreenGui", true) or game.Players.LocalPlayer.PlayerGui:FindFirstChildWhichIsA("ScreenGui", true)
+-- Force original GUI to PlayerGui (fixes Delta mobile invisibility)
+local coreGui = game:GetService("CoreGui")
+local playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+for _, gui in ipairs(coreGui:GetChildren()) do
+    if gui:IsA("ScreenGui") and (gui.Name:find("MM2") or gui.Name:find("Hub") or gui.Name:find("GUI") or gui.Name:find("Azura")) then
+        gui.Parent = playerGui
+        gui.Enabled = true
+        gui.ResetOnSpawn = false
+        gui.IgnoreGuiInset = true
+        print("[Top Edit] Moved GUI to PlayerGui: " .. gui.Name)
+    end
+end
+
+-- Find original GUI to add Weapons tab/section
+local originalGui = playerGui:FindFirstChildWhichIsA("ScreenGui", true) or coreGui:FindFirstChildWhichIsA("ScreenGui", true)
 if not originalGui then
-    warn("[Top Edit] Could not find original GUI - Weapons tab not added")
+    warn("[Top Edit] Could not find GUI - Weapons tab not added")
     return
 end
 
--- Create or find main window/tab system
-local WeaponsTab
+-- Create Weapons content
+local WeaponsContent = Instance.new("ScrollingFrame")
+WeaponsContent.Name = "WeaponsContent"
+WeaponsContent.Size = UDim2.new(1, 0, 1, 0)
+WeaponsContent.BackgroundTransparency = 1
+WeaponsContent.CanvasSize = UDim2.new(0, 0, 0, 600)
+WeaponsContent.ScrollBarThickness = 6
+WeaponsContent.Visible = false
+WeaponsContent.Parent = originalGui:FindFirstChild("Content", true) or originalGui:FindFirstChild("Main", true) or originalGui
 
--- If using Kavo-like UI (common in MM2 scripts)
-if originalGui:FindFirstChild("Main") or originalGui:FindFirstChild("Tabs") then
-    -- Assume it's Kavo or similar
-    local mainFrame = originalGui:FindFirstChild("Main", true) or originalGui
-    WeaponsTab = Instance.new("ScrollingFrame")
-    WeaponsTab.Name = "WeaponsTab"
-    WeaponsTab.Size = UDim2.new(1, 0, 1, 0)
-    WeaponsTab.BackgroundTransparency = 1
-    WeaponsTab.CanvasSize = UDim2.new(0, 0, 0, 800)
-    WeaponsTab.ScrollBarThickness = 6
-    WeaponsTab.Parent = mainFrame  -- or insert into tab container
+-- Weapons title
+local weaponsTitle = Instance.new("TextLabel")
+weaponsTitle.Size = UDim2.new(1, 0, 0, 40)
+weaponsTitle.BackgroundTransparency = 1
+weaponsTitle.Text = "Weapons - by Top"
+weaponsTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+weaponsTitle.Font = Enum.Font.GothamBold
+weaponsTitle.TextSize = 24
+weaponsTitle.Parent = WeaponsContent
 
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 40)
-    title.BackgroundTransparency = 1
-    title.Text = "Weapons - by Top"
-    title.TextColor3 = Color3.fromRGB(0, 255, 255)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 22
-    title.Parent = WeaponsTab
-else
-    warn("[Top Edit] Unknown UI library - Weapons tab not added automatically")
-    return
-end
+-- Visual Spawner
+local visualLabel = Instance.new("TextLabel")
+visualLabel.Size = UDim2.new(1, 0, 0, 30)
+visualLabel.Position = UDim2.new(0, 0, 0, 50)
+visualLabel.BackgroundTransparency = 1
+visualLabel.Text = "Visual Weapon Spawner (client-side)"
+visualLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+visualLabel.Font = Enum.Font.GothamSemibold
+visualLabel.TextSize = 18
+visualLabel.Parent = WeaponsContent
 
--- Visual Weapon Spawner (client-side preview only)
-local function spawnVisualWeapon(name)
+local function spawnVisual(name)
     local tool = Instance.new("Tool")
-    tool.Name = name or "Visual Sword"
+    tool.Name = "Visual " .. name
     tool.RequiresHandle = false
     tool.Parent = LocalPlayer.Backpack
 
     local handle = Instance.new("Part")
     handle.Name = "Handle"
-    handle.Size = Vector3.new(1, 4, 1)
-    handle.BrickColor = BrickColor.new("Really red")
+    handle.Size = Vector3.new(1, 5, 1)
+    handle.BrickColor = BrickColor.new("Bright blue")
     handle.Material = Enum.Material.Neon
     handle.Parent = tool
 
     local mesh = Instance.new("SpecialMesh")
     mesh.MeshType = Enum.MeshType.FileMesh
-    mesh.MeshId = "rbxassetid://114169760"  -- classic sword mesh (change if wanted)
-    mesh.TextureId = ""
-    mesh.Scale = Vector3.new(1, 1, 1)
+    mesh.MeshId = "rbxassetid://114169760"  -- sword mesh
+    mesh.Scale = Vector3.new(1.5, 1.5, 1.5)
     mesh.Parent = handle
 
-    OrionLib:MakeNotification({
-        Name = "Visual Weapon",
-        Content = "Spawned visual " .. tool.Name .. " (client-side only)",
-        Time = 5
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Top Edit",
+        Text = "Spawned visual " .. name .. " (only you see it)",
+        Duration = 5
     })
 end
 
--- Real Weapon Duplicator (duplicates held tool, attempts to make tradeable)
-local function dupeHeldWeapon()
-    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
-    if not tool then
-        OrionLib:MakeNotification({Name = "Error", Content = "Hold a weapon first!", Time = 4})
-        return
-    end
+local visualSword = Instance.new("TextButton")
+visualSword.Size = UDim2.new(0.45, 0, 0, 40)
+visualSword.Position = UDim2.new(0.05, 0, 0, 90)
+visualSword.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+visualSword.Text = "Visual Sword"
+visualSword.TextColor3 = Color3.new(1,1,1)
+visualSword.Font = Enum.Font.GothamBold
+visualSword.TextSize = 16
+visualSword.Parent = WeaponsContent
+visualSword.MouseButton1Click:Connect(function() spawnVisual("Sword") end)
 
-    -- Clone tool locally
-    local dupe = tool:Clone()
-    dupe.Parent = LocalPlayer.Backpack
+local visualGun = Instance.new("TextButton")
+visualGun.Size = UDim2.new(0.45, 0, 0, 40)
+visualGun.Position = UDim2.new(0.5, 0, 0, 90)
+visualGun.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+visualGun.Text = "Visual Gun"
+visualGun.TextColor3 = Color3.new(1,1,1)
+visualGun.Font = Enum.Font.GothamBold
+visualGun.TextSize = 16
+visualGun.Parent = WeaponsContent
+visualGun.MouseButton1Click:Connect(function() spawnVisual("Gun") end)
 
-    -- Attempt to make tradeable (some MM2 games allow cloned tools to drop/trade)
-    dupe.Handle.Anchored = false
-    dupe.Handle.CanCollide = true
-    dupe.Handle.Position = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 5, 0)
-
-    OrionLib:MakeNotification({
-        Name = "Dupe Success",
-        Content = "Duplicated " .. tool.Name .. " - try dropping/trading",
-        Time = 6
-    })
-end
-
--- Add to Weapons tab
-local spawnSection = Instance.new("Frame")
-spawnSection.Size = UDim2.new(1, 0, 0, 150)
-spawnSection.BackgroundTransparency = 1
-spawnSection.Parent = WeaponsTab
-
-local spawnLabel = Instance.new("TextLabel")
-spawnLabel.Size = UDim2.new(1, 0, 0, 30)
-spawnLabel.BackgroundTransparency = 1
-spawnLabel.Text = "Visual Weapon Spawner"
-spawnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-spawnLabel.Font = Enum.Font.GothamSemibold
-spawnLabel.TextSize = 18
-spawnLabel.Parent = spawnSection
-
-addButton(spawnSection, "Spawn Visual Sword", function() spawnVisualWeapon("Visual Sword") end)
-addButton(spawnSection, "Spawn Visual Gun", function() spawnVisualWeapon("Visual Gun") end)
-
-local dupeSection = Instance.new("Frame")
-dupeSection.Size = UDim2.new(1, 0, 0, 100)
-dupeSection.BackgroundTransparency = 1
-dupeSection.Parent = WeaponsTab
-
+-- Real Duplicator
 local dupeLabel = Instance.new("TextLabel")
 dupeLabel.Size = UDim2.new(1, 0, 0, 30)
+dupeLabel.Position = UDim2.new(0, 0, 0, 150)
 dupeLabel.BackgroundTransparency = 1
-dupeLabel.Text = "Real Weapon Duplicator"
+dupeLabel.Text = "Real Weapon Duplicator (hold weapon)"
 dupeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 dupeLabel.Font = Enum.Font.GothamSemibold
 dupeLabel.TextSize = 18
-dupeLabel.Parent = dupeSection
+dupeLabel.Parent = WeaponsContent
 
-addButton(dupeSection, "Dupe Held Weapon", dupeHeldWeapon)
+local function dupeHeld()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local held = char:FindFirstChildWhichIsA("Tool")
+    if not held then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Error",
+            Text = "Hold a weapon to dupe",
+            Duration = 5
+        })
+        return
+    end
 
--- Credit change (if original has label)
-local creditLabel = sg:FindFirstChild("Credit", true) or sg:FindFirstChild("By", true)
-if creditLabel then
-    creditLabel.Text = "MM2 Hub by Top"
+    local clone = held:Clone()
+    clone.Parent = LocalPlayer.Backpack
+
+    clone.Parent = game.Workspace
+    if clone:FindFirstChild("Handle") then
+        clone.Handle.Position = char.HumanoidRootPart.Position + Vector3.new(0, 5, 0)
+        clone.Handle.Anchored = false
+        clone.Handle.CanCollide = true
+    end
+
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Dupe Success - Top",
+        Text = "Duplicated " .. held.Name .. " - check backpack & ground",
+        Duration = 6
+    })
 end
 
-OrionLib:MakeNotification({
-    Name = "Edited by Top",
-    Content = "Weapons tab added! Visual spawn + real dupe ready. Enjoy!",
-    Time = 8
+local dupeBtn = Instance.new("TextButton")
+dupeBtn.Size = UDim2.new(0.9, 0, 0, 50)
+dupeBtn.Position = UDim2.new(0.05, 0, 0, 190)
+dupeBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+dupeBtn.Text = "Dupe Held Weapon"
+dupeBtn.TextColor3 = Color3.new(1,1,1)
+dupeBtn.Font = Enum.Font.GothamBold
+dupeBtn.TextSize = 18
+dupeBtn.Parent = WeaponsContent
+dupeBtn.MouseButton1Click:Connect(dupeHeld)
+
+-- Change any existing credits
+for _, label in ipairs(originalGui:GetDescendants()) do
+    if label:IsA("TextLabel") and label.Text:find("Azura") then
+        label.Text = label.Text:gsub("Azura", "Top")
+    end
+end
+
+-- Final confirmation
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "MM2 Hub by Top",
+    Text = "Edits loaded! Weapons tab added - visual spawn + real dupe ready.",
+    Duration = 10
 })
 
-print("MM2 Hub by Top - Weapons tab added successfully!")
+print("MM2 Hub by Top - Edits applied")
